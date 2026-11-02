@@ -4,7 +4,7 @@ A terminal widget that shows Indianapolis and India time side by side and tells 
 
 ## Project Goal
 
-My mom lives in India and I live in Indianapolis. The 9.5 hour time difference means one of us is usually asleep, in class, or at work when the other is free, so we miss a lot of calls from each other. This project will check both of our schedules against the current time in each zone and give a clear answer: **call now** or **call at X**.
+My mom lives in India and I live in Indianapolis. The 10.5 hour time difference means one of us is usually asleep, in class, or at work when the other is free, so we miss a lot of calls from each other. This project will check both of our schedules against the current time in each zone and give a clear answer: **call now** or **call at X**.
 
 ## MVP Scope
 
@@ -55,7 +55,7 @@ mom     work    10:00  18:00
 ## Project Structure
 
 ```
-home-clock/
+Final-Project/
 ├── src/         # Java source (HomeClock.java and supporting classes)
 ├── tests/       # Tests using a fixed Clock
 ├── docs/        # Eisenhower Matrix and flowchart
