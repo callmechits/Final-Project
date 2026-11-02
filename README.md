@@ -61,6 +61,7 @@ home-clock/
 ├── docs/        # Eisenhower Matrix and flowchart
 ├── README.md
 ```
+Right now, all empty directories have a .gitkeep file otherwise they were not being pushed.
 
 `homeclock.sh` (launcher) and `schedule.conf` will be added at the repo root while I'm building it.
 
