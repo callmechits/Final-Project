@@ -49,7 +49,7 @@ mom     work    10:00  18:00
 
 ## Design Docs
 
-- [Eisenhower Matrix](docs/Eisenhower-Matrix.pdf): (Do / Schedule / Delegate / Delete)
+- [Eisenhower Matrix](docs/Eisenhower%20Matrix.pdf): (Do / Schedule / Delegate / Delete)
 - [System Flowchart](docs/flowchart.pdf): how data and control flow through the program
 
 ## Project Structure
