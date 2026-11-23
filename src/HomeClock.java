@@ -74,29 +74,57 @@ public class HomeClock {
         return t.equals("24:00") ? LocalTime.MIDNIGHT : LocalTime.parse(t);    // Return 24:00 if its midnight else just the parsed time.
     }
 
-    // Parses schedule.conf into usable parts
-    static List<Window> loadWindows(Path file) throws IOException {
+    /**
+     * Parses schedule lines: who label start end day. Blank lines and
+     * lines starting with '#' are skipped
+     */
+    static List<Window> parseWindows(List<String> lines) {
         List<Window> windows = new ArrayList<>();
-        List<String> lines = Files.readAllLines(file);
 
         for (int i = 0; i < lines.size(); i++) {
             String line = lines.get(i).strip();
+            if (line.isEmpty() || line.startsWith("#")) continue;
 
-            if (line.isEmpty() || line.startsWith(("#"))) continue;
-                String[] f = line.split("\\s+");
-                if(f.length != 5) {
-                    throw new IllegalArgumentException("line " + (i + 1) + ": expected 5 fields " + "(who label start end day), got " + f.length);
-                }
-                try {
-                    windows.add(new Window(f[0].toLowerCase(), f[1], parseTime(f[2]), parseTime(f[3]), parseDays(f[4])));
-                } catch (DateTimeParseException e) {
-                    throw new IllegalArgumentException("line " + (i+1) + ": bad time (use HH:mm, 24h)");
-                } catch (IllegalArgumentException e) {
-                    throw new IllegalArgumentException("line " + (i+1) + ": " + e.getMessage());
-                }
+            String[] f = line.split("\\s+");
+            if(f.length != 5) {
+                throw new IllegalArgumentException("line " + (i+1) + ": expected 5 fields " + "(who label start end day, got" + f.length);
             }
+            try {
+                String who = f[0].toLowerCase();
+                if(!who.equals("me") && !who.equals("mom")) {
+                    throw new IllegalArgumentException("who must be 'me' or 'mom', got '" + f[0] + "'");
+                }
+                windows.add(new Window(who, f[1], parseTime(f[2]), parseTime(f[3]), parseDays(f[4])));
+            } catch (DateTimeParseException e) {
+                throw new IllegalArgumentException("line " + (i+1) + ": bad time (use HH:mm, 24h)");
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("line " + (i+1) + ": " + e.getMessage());
+            }
+        }
         return windows;
+    }
+
+    static List<Window> loadWindows(Path file) throws IOException {
+        return parseWindows(Files.readAllLines(file));
     }   
+
+    // Milestone 4
+    // Finding timezone of person
+    static ZoneId zoneOf(String who) {
+        return who.equals("me") ? INDY : IST;
+    }
+
+    // Finding time for given 'who'
+    static ZonedDateTime localNow(Clock clock, String who) {
+        return ZonedDateTime.now(clock.withZone(zoneOf(who)));
+    }
+
+    static Window busyWindow(List<Window> windows, String who, ZonedDateTime local) {
+        LocalTime t = local.toLocalTime();
+        // TODO: Compare both times to gete busy windows and also extend 
+        // feature crossing midnight.
+        return null;
+    } 
 
     static void showTimes(Clock clock) {
         ZonedDateTime me  = ZonedDateTime.now(clock.withZone(INDY));
