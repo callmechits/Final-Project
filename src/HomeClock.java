@@ -121,10 +121,32 @@ public class HomeClock {
 
     static Window busyWindow(List<Window> windows, String who, ZonedDateTime local) {
         LocalTime t = local.toLocalTime();
-        // TODO: Compare both times to gete busy windows and also extend 
-        // feature crossing midnight.
+        DayOfWeek today = local.getDayOfWeek();
+        DayOfWeek yesterday = today.minus(1);
+
+        for (Window w : windows) {
+            if (!w.who().equals(who)) continue;
+
+            if (w.end().isAfter(w.start())) {
+                // For the same day: start <= t < end
+                if (w.days().contains(today) && !t.isBefore(w.start()) && t.isBefore(w.end())) {
+                    return w;
+                }
+            } else {
+                // When the start and end time cross midnight in between
+                boolean evening = w.days().contains(today) && !t.isBefore(w.start());
+                boolean morning = w.days().contains(yesterday) && t.isBefore(w.end());
+                if (evening || morning) {
+                    return w;
+                }
+            }
+        }
         return null;
     } 
+
+    static boolean isFree(List<Window> windows, String who, ZonedDateTime local) {
+        return busyWindow(windows, who, local) == null;
+    }
 
     static void showTimes(Clock clock) {
         ZonedDateTime me  = ZonedDateTime.now(clock.withZone(INDY));
