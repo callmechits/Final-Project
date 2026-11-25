@@ -3,8 +3,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -20,6 +22,11 @@ public class HomeClock {
     static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("EEE d MMM  hh:mm a"); // Example output: "Wed 11 Nov  08:30 PM"
     static final int COL = 25;
     static final String RULE = "\u2500".repeat(COL * 2 + 1); // Trying to have a row of '-' before and after the matrix is printed.
+    static final boolean COLOR = System.getenv("NO_COLOR") == null;
+    static final String GREEN = COLOR ? "\u001B[32m" : "";
+    static final String RED = COLOR ? "\u001B[31m" : "";
+    static final String BOLD = COLOR ? "\u001B[1m" : "";
+    static final String RESET = COLOR ? "\u001B[0m" : "";
     
     record Window(String who, String label, LocalTime start, LocalTime end, Set<DayOfWeek> days) {}
 
@@ -148,6 +155,38 @@ public class HomeClock {
         return busyWindow(windows, who, local) == null;
     }
 
+
+    // Milestone 5
+    record Verdict(boolean good, String reason) {}
+
+    // Uses data from schedule file to describe situations
+    static String describe(String who, String label) {
+        String subject = who.equals("me") ? "You're" : "Mom is";
+        String state = switch (label.toLowerCase()) {
+            case "sleep" -> "asleep";
+            case "class" -> "in class";          
+            case "work" -> "at work";           
+            case "study" -> "studying";          
+            default -> "busy (" + label + ")";
+        };
+        return subject + " " + state;
+    }
+
+    // Returning YES if both people are free; otherwise NO + listing reasons
+    static Verdict verdict(List<Window> windows, Clock clock) {
+        List<String> reasons = new ArrayList<>();
+        for (String who : new String[] {"me", "mom"}) {
+            Window w = busyWindow(windows, who, localNow(clock, who));
+            if (w != null) {
+                reasons.add(describe(who, w.label()));
+            }  
+        }
+        if (reasons.isEmpty()) {
+                return new Verdict(true, "Good time to call");
+            }
+        return new Verdict(false, String.join("; ", reasons));
+    }
+
     static void showTimes(Clock clock) {
         ZonedDateTime me  = ZonedDateTime.now(clock.withZone(INDY));
         ZonedDateTime mom = ZonedDateTime.now(clock.withZone(IST));
@@ -159,13 +198,27 @@ public class HomeClock {
         System.out.println();
     }
 
+    // Prints green YES and red NO along with reason why
+    static void showVerdict(Verdict v) {
+        if (v.good()) {
+            System.out.println(BOLD + GREEN + "YES  " + v.reason() + RESET);
+        } else {
+            System.out.println(BOLD + RED + "NO   " + v.reason() + RESET);
+        }
+        System.out.println();
+    }
+
     public static void main(String[] args) throws IOException {
         Path conf = Path.of(args.length > 0 ? args[0] : "schedule.conf");
 
-        showTimes(Clock.systemUTC());
-
-        for (Window w : loadWindows(conf)) {
-            System.out.printf("%-4s %-8s %s -> %s  %s%n", w.who(), w.label(), w.start(), w.end(), w.days());
+        Clock clock = Clock.systemUTC();
+        if (args.length > 1) {
+            clock = Clock.fixed(LocalDateTime.parse(args[1]).atZone(INDY).toInstant(), ZoneOffset.UTC);
         }
+        
+        List<Window> windows = loadWindows(conf);
+
+        showTimes(clock);
+        showVerdict(verdict(windows, clock));
     }
 }
