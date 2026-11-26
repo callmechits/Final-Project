@@ -70,8 +70,8 @@ Right now, all empty directories have a .gitkeep file otherwise they were not be
 - [✅] 1. Set up repo and environment
 - [✅] 2. Display both times side by side
 - [✅] 3. Load availability windows from `schedule.conf`
-- [ ] 4. Check whether each person is free (including windows that cross midnight)
-- [ ] 5. Give the "good time to call?" verdict with a reason
+- [✅] 4. Check whether each person is free (including windows that cross midnight)
+- [✅] 5. Give the "good time to call?" verdict with a reason
 - [ ] 6. Count down to the next good window
 - [ ] 7. Refresh live and add the Bash launcher
 - [ ] 8. Polish, handle config errors, and document (v1.0)

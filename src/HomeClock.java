@@ -3,6 +3,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -10,10 +11,12 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 public class HomeClock {
@@ -186,6 +189,42 @@ public class HomeClock {
             }
         return new Verdict(false, String.join("; ", reasons));
     }
+
+    // Milestone 6
+    static final int SEARCH_MINUTES = 7 * 24 * 60;     // weekly schedule repeat
+    static final int MIN_WINDOW_MINUTES = 15;          // time to check for a free stretch
+
+    // True if both people are free at given instant (accounting for time zones)
+    static boolean bothFree(List<Window> windows, Instant t) {
+        return isFree(windows, "me", ZonedDateTime.ofInstant(t, INDY)) && isFree(windows, "mom", ZonedDateTime.ofInstant(t, IST));
+    }
+
+    // Checking and stepping forward one minute per time (starting point is 'from')
+    // Checks the whole week and finds the first minute where both people are free
+    static Optional<Instant> firstMinute(List<Window> windows, Instant from, boolean wantFree) {
+        Instant base = from.truncatedTo(ChronoUnit.MINUTES);
+        for (int i = 1; i <= SEARCH_MINUTES; i++) {
+            Instant t = base.plus(i, ChronoUnit.MINUTES);
+            if (bothFree(windows, t) == wantFree) {
+                return Optional.of(t);
+            }
+        }
+        return Optional.empty();
+    }
+
+    // Counts minutes which are free for both people, capped at MIN_WINDOW_MINUTES
+    static int freeRun(List<Window> windows, Instant t, int cap) {
+        int n = 0;
+        while (n < cap && bothFree(windows, t.plus(n, ChronoUnit.MINUTES))) {
+            n++;
+        }
+        return n;
+    }
+
+    // TODO: Find next good start, skip tiny gaps.
+    // TODO: Set a format for myself to keep or drop times.
+    // TODO: Change method of printing out the times for both people.
+    // TODO: Display good time windows
 
     static void showTimes(Clock clock) {
         ZonedDateTime me  = ZonedDateTime.now(clock.withZone(INDY));
