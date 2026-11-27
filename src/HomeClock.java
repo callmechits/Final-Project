@@ -3,6 +3,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -221,10 +222,76 @@ public class HomeClock {
         return n;
     }
 
-    // TODO: Find next good start, skip tiny gaps.
-    // TODO: Set a format for myself to keep or drop times.
-    // TODO: Change method of printing out the times for both people.
-    // TODO: Display good time windows
+    // Finding when the window of MIN_WINDOW_MINUTES opens up
+    // Also skips tiny gaps
+    static Optional<Instant> nextGoodStart(List<Window> windows, Instant from) {
+        Instant base = from.truncatedTo(ChronoUnit.MINUTES);
+        int i = 1;
+        while (i <= SEARCH_MINUTES) {
+            Instant t = base.plus(i, ChronoUnit.MINUTES);
+            if (!bothFree(windows, t)) {
+                i++;
+                continue;
+            }
+            int run = freeRun(windows, t, MIN_WINDOW_MINUTES);
+            if (run >= MIN_WINDOW_MINUTES) {
+                return Optional.of(t);
+            }
+            i += run;   // since it's so short, just jump past this
+        }
+        return Optional.empty();
+    }
+
+    // Example: 135 min -> 2h 15m, 1500 min -> 1d 1h etc.
+    static String formatDuration(Duration d) {
+        long min = d.toMinutes();
+        long days = min / 1440;
+        long hours = (min % 1440) / 60;
+        long mins = min % 60;
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) {
+            sb.append(days).append("d ");
+        }
+        if (hours > 0) {
+            sb.append(hours).append("h ");
+        }
+        if (mins > 0 || sb.length() == 0) {
+            sb.append(mins).append("m");
+        } 
+        return sb.toString().strip();
+    }
+
+    // How to print the free windows
+    static void showBoth(Instant t) {
+        System.out.printf("  %-4s %s%n", "me", ZonedDateTime.ofInstant(t, INDY).format(FMT));
+        System.out.printf("  %-4s %s%n", "Mom", ZonedDateTime.ofInstant(t, IST).format(FMT));
+    }
+
+    // When to show the free windows
+    static void showNextWindow(List<Window> windows, Clock clock, Verdict v) {
+        Instant now = clock.instant();
+
+        if (v.good()) {
+            Optional<Instant> end = firstMinute(windows, now, false);
+            if (end.isEmpty()) {
+                System.out.println("You are both free for the next 7 days.");
+            } else {
+                System.out.println("Window closes in " + formatDuration(Duration.between(now, end.get()))  + ":");
+                showBoth(end.get());
+            }
+        } else {
+            Optional<Instant> start = nextGoodStart(windows, now);
+            if (start.isEmpty()) {
+                System.out.println("No good window in the next 7 days. Check schedule.conf.");
+            } else {
+                Optional<Instant> end = firstMinute(windows, start.get(), false);
+                String lasts = end.isPresent() ? ", lasts " + formatDuration(Duration.between(start.get(), end.get())) : "";
+                System.out.println("Next good window starts in " + formatDuration(Duration.between(now, start.get())) + lasts + ":");
+                showBoth(start.get());
+            }
+        }
+        System.out.println();
+    }
 
     static void showTimes(Clock clock) {
         ZonedDateTime me  = ZonedDateTime.now(clock.withZone(INDY));
@@ -258,6 +325,8 @@ public class HomeClock {
         List<Window> windows = loadWindows(conf);
 
         showTimes(clock);
-        showVerdict(verdict(windows, clock));
+        Verdict v = verdict(windows, clock);
+        showVerdict(v);
+        showNextWindow(windows, clock, v);
     }
 }
